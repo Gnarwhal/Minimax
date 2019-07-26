@@ -24,6 +24,7 @@
  *
  *******************************************************************************/
 
+use std::{thread, time};
 use std::io::{self, stdin, Write};
 use rand::Rng;
 
@@ -110,7 +111,7 @@ So! Without further ado let's get this show on the road!
 							}
 						},
 						Err(_) => {
-							println!("Hmm an interesting proposition! Unfortunately I don't know how to handle negative depths at this time!");
+							println!("That's quite the depth you got there! I'm not sure how to handle it!");
 							continue;
 						},
 					};
@@ -284,23 +285,59 @@ fn parse_bool(value: &str) -> Result<bool, &'static str> {
 	}
 }
 
+enum Direction {
+	Left,
+	Right,
+}
+
 fn run_game(params: &Parameters) {
+	let mut active_layer:  u32 = 0;
+	let mut active_branch: u32 = 0;
+	let mut active_player      = false;
 	let tree = generate_tree(params.depth, params.parity);
 
-	type Input = fn() -> str;
+	println!("Let the game begin!
 
-	//let player_one = user_input;
-	//let player_two = if params.singleplayer { computer_input } else { user_input };
+Player 1 you are trying to {player_one_goal} the value. Player 2 you are trying to {player_two_goal} the value.",
+	player_one_goal = if params.parity { "maximize" } else { "minimize" },
+	player_two_goal = if params.parity { "minimize" } else { "maximize" });
 
-	//loop {
-		println!("Let the game begin!
+	loop {
+		print_tree(&tree, active_layer, active_branch);
 
-Player one you are trying to {player_one_goal} the value. Player two you are trying to {player_two_goal} the value.",
-		player_one_goal = if params.parity { "maximize" } else { "minimize" },
-		player_two_goal = if params.parity { "minimize" } else { "maximize" });
+		if active_layer as usize == tree.len() - 1 {
+			println!("And that's the game! Your final result is: {}\n", tree[active_layer as usize][active_branch as usize]);
+			break;
+		}
+		else {
+			print!("Player {} you're up! Which direction would you like to go, left or right?\nDirection: ", 
+				if active_player { 2 }
+				else             { 1 }
+			);
+			if let Err(err) = io::stdout().flush() {
+				panic!("{}", err);
+			}
 
-		print_tree(&tree);
-	//}
+			let dir =
+				if !params.singleplayer || !active_player {
+					user_input()
+				}
+				else {
+					computer_input(active_layer, active_branch, &tree, params.parity)
+				};
+
+			match dir {
+				Direction::Left => {
+					active_branch = active_branch * 2;
+				},
+				Direction::Right => {
+					active_branch = active_branch * 2 + 1;
+				},
+			}
+			active_layer += 1;
+			active_player = !active_player;
+		}
+	}
 }
 
 fn generate_tree(depth: u32, parity: bool) -> Vec<Vec<i32>> {
@@ -345,6 +382,112 @@ fn expand_tree(tree: &mut Vec<Vec<i32>>, parity: bool) {
 	expand_tree(tree, !parity);
 }
 
-fn print_tree(tree: &Vec<Vec<i32>>) {
-	println!("{:?}", tree);
+fn user_input() -> Direction {
+	let mut input = String::new();
+	stdin()
+		.read_line(&mut input)
+		.expect("Oh dear! It appears that input was invalid!");
+	match input.trim().as_ref() {
+		"left"  => Direction::Left,
+		"right" => Direction::Right,
+		_       => {
+			print!("Please choose either left or right.\nDirection: ");
+			if let Err(err) = io::stdout().flush() {
+				panic!("{}", err);
+			};
+			user_input()
+		},
+	}
+}
+
+fn computer_input(active_layer: u32, active_branch: u32, tree: &Vec<Vec<i32>>, parity: bool) -> Direction {
+	const BASE_DURATION: u32 = 150;
+	const VARIATION:     u32 = 50;
+	let left_value  = tree[(active_layer + 1) as usize][(active_branch * 2    ) as usize];
+	let right_value = tree[(active_layer + 1) as usize][(active_branch * 2 + 1) as usize];
+	let direction =
+		if left_value < right_value && parity {
+			Direction::Left
+		}
+		else {
+			Direction::Right
+		};
+
+	let sleep_duration = time::Duration::from_millis(500);
+	thread::sleep(sleep_duration);
+
+	for c in match direction {
+			Direction::Left  => "left",
+			Direction::Right => "right",
+		}.chars() {
+		print!("{}", c);
+		if let Err(err) = io::stdout().flush() {
+			panic!("{}", err);
+		};
+		let sleep_duration = time::Duration::from_millis((BASE_DURATION + rand::thread_rng().gen_range(0, VARIATION)) as u64);
+		thread::sleep(sleep_duration);
+	}
+
+	println!("");
+	direction
+}
+
+fn print_tree(tree: &Vec<Vec<i32>>, active_layer: u32, active_branch: u32) {
+	println!("");
+	let mut layer_number = 0;
+	if tree.len() > 1 {
+		let mut schematics: Vec<(u32, u32)> = vec![(1, 5)];
+		for _i in 0..(tree.len() - 2) {
+			let (offset, length) = schematics[0];
+			schematics.insert(0, (offset + length / 2 + 1, length * 2 + 1));
+		}
+		let mut branch_count = 1;
+		for (i, scheme) in schematics.iter().enumerate() {
+			let (offset, length) = scheme;
+			let mut output = String::new();
+			let mut vertical = String::new();
+			for _j in 0..*offset {
+				output.push(' ');
+				vertical.push(' ');
+			}
+			for j in 0..branch_count {
+				output.push('+');
+				vertical.push('|');
+				for k in 0..*length {
+					if k == length / 2 {
+						output.push('B');
+						if i as u32 == active_layer && j == active_branch {
+							vertical.push('^');
+						}
+						else {
+							vertical.push(' ');
+						}
+					}
+					else {
+						output.push('-');
+						vertical.push(' ');
+					}
+				}
+				output.push('+');
+				vertical.push('|');
+				if j < branch_count - 1 {
+					for _k in 0..*length {
+						output.push(' ');
+						vertical.push(' ');
+					}
+				}
+			}
+			println!("{}:{}  {}\n     {}", i, if layer_number == active_layer { ">" } else { " " }, output, vertical);
+			branch_count *= 2;
+			layer_number += 1;
+		}
+	}
+	print!("{}:{}  ", layer_number, if layer_number == active_layer { ">" } else { " " });
+	for leaf in &tree[layer_number as usize] {
+		print!("{}   ", leaf);
+	}
+	if let Err(err) = io::stdout().flush() {
+		panic!("{}", err);
+	}
+	println!("\n");
 }
