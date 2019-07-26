@@ -28,10 +28,13 @@ use std::io::{self, stdin, Write};
 use rand::Rng;
 
 const MINIMAX_TITLE: &str = r"
-     ____  _ _  _ _ ____  ___ __  __
-    |    \| | \| | |    \|   \\ \/ /
-    | | | | |    | | | | | |\ \>  <
-    |_|_|_|_|_|\_|_|_|_|_|_| \_\/\_\";
+******************************************
+*     ____  _ _  _ _ ____  ___ __  __    *
+*    |    \| | \| | |    \|   \\ \/ /    *
+*    | | | | |    | | | | | |\ \>  <     *
+*    |_|_|_|_|_|\_|_|_|_|_|_| \_\/\_\    *
+*                                        *
+******************************************";
 
 enum Action {
 	Example,
@@ -40,6 +43,12 @@ enum Action {
 	Set(String),
 	Quit,
 	Invalid(String),
+}
+
+struct Parameters {
+	singleplayer: bool,
+	depth: u32,
+	parity: bool,
 }
 
 fn main() {
@@ -65,8 +74,11 @@ intelligence. I won't always understand you, but I try my best.
 So! Without further ado let's get this show on the road!
 ");
 
-	let mut singleplayer = true;
-	let mut depth: u32   = 4;
+	let mut params = Parameters {
+		singleplayer: true,
+		depth: 4,
+		parity: true,
+	};
 
 	loop {
 		print!("Please enter a command: ");
@@ -78,16 +90,16 @@ So! Without further ado let's get this show on the road!
 		match action {
 			Action::Example      => walkthrough_example(),
 			Action::Help         => print_help(),
-			Action::Begin        => println!("You would like to begin"),
+			Action::Begin        => run_game(&params),
 			Action::Set(string)  => match get_values(&string) {
 				Ok(("singleplayer", value)) => {
 					match parse_bool(&value) {
-						Ok(boolean) => { singleplayer = boolean; },
+						Ok(boolean) => { params.singleplayer = boolean; },
 						Err(err)    => println!("{}", err),
 					};
 				},
 				Ok(("depth", value)) => {
-					depth = match value.parse::<u32>() {
+					params.depth = match value.parse::<u32>() {
 						Ok(num) => {
 							if num > 0 {
 								num
@@ -101,6 +113,26 @@ So! Without further ado let's get this show on the road!
 							println!("A depth of \"value\" does not make sense to me! I was expecting a positive number!");
 							continue;
 						},
+					};
+				},
+				Ok(("min", value)) => {
+					params.parity = match value {
+						"player_one" => false,
+						"player_two" => true,
+						_            => {
+							println!("Hmm. I am not familiar with player \"value\"!");
+							continue;
+						}
+					};
+				},
+				Ok(("max", value)) => {
+					params.parity = match value {
+						"player_one" => true,
+						"player_two" => false,
+						_            => {
+							println!("Hmm. I am not familiar with player \"value\"!");
+							continue;
+						}
 					};
 				},
 				Ok((key, _)) => println!("\"{}\" is not a key I recognize! Perhaps try something else!", key),
@@ -216,8 +248,10 @@ example > Runs you through an example game if still feel a little unclear on the
 help    > Well I think you already know about this command :)
 begin   > Begins the epic journey through the binary tree
 set {{key}} = {{value}} > Sets some paramaters for the game. Currently the available paramaters are:
-	singleplayer - a boolean value which switches between playing against me and playing against your mates
-	depth        - an integer value which sets the depth of the tree
+	singleplayer - A boolean value which which sets whether you play against me or play against your mates
+	depth        - An integer value which sets the depth of the tree
+	min          - One of either \"player_one\" OR \"player_two\". Sets that player's goal to minimize the value
+	max          - One of either \"player_one\" OR \"player_two\". Sets that player's goal to maximize the value
 quit > I should think you would know what this one does as well");
 }
 
@@ -230,7 +264,7 @@ fn get_values(string: &str) -> Result<(&str, &str), ()> {
 		}
 	}
 	if split == string.len() - 1 {
-		return Err(())
+		return Err(());
 	}
 	let key   = string[..split].trim();
 	let value = string[(split + 1)..].trim();
@@ -247,5 +281,69 @@ fn parse_bool(value: &str) -> Result<bool, &'static str> {
 		"true"  => Ok(true),
 		"false" => Ok(false),
 		_       => Err("I do apologize, but I was expecting a boolean type!"),
+	}
+}
+
+fn run_game(params: &Parameters) {
+	let tree = generate_tree(params.depth, params.parity);
+
+	type Input = fn() -> str;
+
+	//let player_one = user_input;
+	//let player_two = if params.singleplayer { computer_input } else { user_input };
+
+	//loop {
+		println!("Let the game begin!
+
+Player one you are trying to maximize the value. Player two you are trying to minimize the value.");
+
+		print_tree(&tree);
+	//}
+}
+
+fn generate_tree(depth: u32, parity: bool) -> Vec<Vec<u32>> {
+	const TREE_RANGE: u32 = 1000;
+	
+	let mut tree: Vec<Vec<u32>> = Vec::new();
+	
+	let mut leaves: Vec<u32> = Vec::new();
+	let mut leaf_count = pow(2, depth - 1);
+	while leaf_count > 0 {
+		leaves.push(rand::thread_rng().gen_range(0, TREE_RANGE));
+		leaf_count -= 1;
+	}
+	tree.push(leaves);
+	
+	expand_tree(&mut tree, depth % 2 == parity as u32);
+
+	tree
+}
+
+fn pow(mut base: u32, mut power: u32) -> u32 {
+	let mut result = 1;
+	while power > 0 {
+		if power & 1 != 0 { result = result * base; }
+		base *= base;
+		power >>= 1;
+	}
+	result
+}
+
+fn expand_tree(tree: &mut Vec<Vec<u32>>, parity: bool) {
+	if tree[0].len() == 1 { return; }
+	let mut write_layer: Vec<u32> = Vec::new();
+	for i in 0..tree[0].len() / 2 {
+		write_layer.push(
+			if (tree[0][i * 2] < tree[0][i * 2 + 1]) == parity { tree[0][i * 2] }
+			else { tree[0][i * 2 + 1] }
+		);
+	}
+	tree.insert(0, write_layer);
+	expand_tree(tree, !parity);
+}
+
+fn print_tree(tree: &Vec<Vec<u32>>) {
+	for layer in tree {
+		println!("{:?}", layer);
 	}
 }
