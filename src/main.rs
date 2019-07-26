@@ -52,7 +52,7 @@ struct Parameters {
 }
 
 fn main() {
-	println!("{}\n\n", MINIMAX_TITLE);
+	println!("{}\n", MINIMAX_TITLE);
 
 	println!("Welcome to Minimax, a simple game of perfect knowledge!
 
@@ -105,12 +105,12 @@ So! Without further ado let's get this show on the road!
 								num
 							}
 							else {
-								println!("Zero is pretty great! Alas it does not make sense as a depth value!");
+								println!("Zero is pretty great! Alas it does not work as a depth value in this case!");
 								continue;
 							}
 						},
 						Err(_) => {
-							println!("A depth of \"value\" does not make sense to me! I was expecting a positive number!");
+							println!("Hmm an interesting proposition! Unfortunately I don't know how to handle negative depths at this time!");
 							continue;
 						},
 					};
@@ -135,11 +135,11 @@ So! Without further ado let's get this show on the road!
 						}
 					};
 				},
-				Ok((key, _)) => println!("\"{}\" is not a key I recognize! Perhaps try something else!", key),
-				Err(_)     => println!("Unfortunately I'm not sure what you are trying to set with the command \"{}\"!", string),
+				Ok((key, _)) => println!("\"{}\" is not a key I am familiar with!", key),
+				Err(_)     => println!("The syntax in your set command \"{}\" appears to be off!", string),
 			},
 			Action::Quit         => break,
-			Action::Invalid(err) => println!("Beep! Bop! Boop! Cannot compute \"{}\"! Haha!", err),
+			Action::Invalid(err) => println!("Beep! Bop! Boop! Cannot execute command \"{}\"! Haha!", err),
 		}
 	}
 }
@@ -280,7 +280,7 @@ fn parse_bool(value: &str) -> Result<bool, &'static str> {
 	match value {
 		"true"  => Ok(true),
 		"false" => Ok(false),
-		_       => Err("I do apologize, but I was expecting a boolean type!"),
+		_       => Err("I do apologize, but I was expecting a boolean value!"),
 	}
 }
 
@@ -295,21 +295,24 @@ fn run_game(params: &Parameters) {
 	//loop {
 		println!("Let the game begin!
 
-Player one you are trying to maximize the value. Player two you are trying to minimize the value.");
+Player one you are trying to {player_one_goal} the value. Player two you are trying to {player_two_goal} the value.",
+		player_one_goal = if params.parity { "maximize" } else { "minimize" },
+		player_two_goal = if params.parity { "minimize" } else { "maximize" });
 
 		print_tree(&tree);
 	//}
 }
 
-fn generate_tree(depth: u32, parity: bool) -> Vec<Vec<u32>> {
-	const TREE_RANGE: u32 = 1000;
+fn generate_tree(depth: u32, parity: bool) -> Vec<Vec<i32>> {
+	const TREE_RANGE_MIN: i32 = 100;
+	const TREE_RANGE_MAX: i32 = 1000;
 	
-	let mut tree: Vec<Vec<u32>> = Vec::new();
+	let mut tree: Vec<Vec<i32>> = Vec::new();
 	
-	let mut leaves: Vec<u32> = Vec::new();
+	let mut leaves: Vec<i32> = Vec::new();
 	let mut leaf_count = pow(2, depth - 1);
 	while leaf_count > 0 {
-		leaves.push(rand::thread_rng().gen_range(0, TREE_RANGE));
+		leaves.push(rand::thread_rng().gen_range(TREE_RANGE_MIN, TREE_RANGE_MAX));
 		leaf_count -= 1;
 	}
 	tree.push(leaves);
@@ -329,9 +332,9 @@ fn pow(mut base: u32, mut power: u32) -> u32 {
 	result
 }
 
-fn expand_tree(tree: &mut Vec<Vec<u32>>, parity: bool) {
+fn expand_tree(tree: &mut Vec<Vec<i32>>, parity: bool) {
 	if tree[0].len() == 1 { return; }
-	let mut write_layer: Vec<u32> = Vec::new();
+	let mut write_layer: Vec<i32> = Vec::new();
 	for i in 0..tree[0].len() / 2 {
 		write_layer.push(
 			if (tree[0][i * 2] < tree[0][i * 2 + 1]) == parity { tree[0][i * 2] }
@@ -342,8 +345,6 @@ fn expand_tree(tree: &mut Vec<Vec<u32>>, parity: bool) {
 	expand_tree(tree, !parity);
 }
 
-fn print_tree(tree: &Vec<Vec<u32>>) {
-	for layer in tree {
-		println!("{:?}", layer);
-	}
+fn print_tree(tree: &Vec<Vec<i32>>) {
+	println!("{:?}", tree);
 }
