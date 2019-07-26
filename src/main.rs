@@ -62,7 +62,8 @@ is enter the \"help\" command and I'll be there to assist you. I say assist you 
 a favor. Really I just explain the limited ways in which you can interact with me given my simplistic
 intelligence. I won't always understand you, but I try my best.
 
-So! Without further ado let's get this show on the road!");
+So! Without further ado let's get this show on the road!
+");
 
 	let mut singleplayer = true;
 	let mut depth: u32   = 4;
@@ -76,7 +77,7 @@ So! Without further ado let's get this show on the road!");
 		let action = get_action();
 		match action {
 			Action::Example      => println!("You would like an example"),
-			Action::Help         => println!("You would like help"),
+			Action::Help         => print_help(),
 			Action::Begin        => println!("You would like to begin"),
 			Action::Set(string)  => match get_values(&string) {
 				Ok(("singleplayer", value)) => {
@@ -136,6 +137,18 @@ fn starts_with(string: &str, begin: &str) -> bool {
 		if a != b { return false; }
 	}
 	true
+}
+
+fn print_help() {
+	println!("Currently I have a number of commands at my disposal. I'll go ahead and list them for you real quick.
+
+example > Runs you through an example game if still feel a little unclear on the rules of the game
+help    > Well I think you already know about this command :)
+begin   > Begins the epic journey through the binary tree
+set {{key}} = {{value}} > Sets some paramaters for the game. Currently the available paramaters are:
+	singleplayer - a boolean value which switches between playing against me and playing against your mates
+	depth        - an integer value which sets the depth of the tree
+quit > I should think you would know what this one does as well");
 }
 
 fn get_values(string: &str) -> Result<(&str, &str), ()> {
