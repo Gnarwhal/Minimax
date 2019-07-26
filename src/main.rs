@@ -24,25 +24,26 @@
  *
  *******************************************************************************/
 
-use std::io;
+use std::io::{self, Write};
 use rand::Rng;
 
 const MINIMAX_TITLE: &str = r"
- ____  _ _  _ _ ____  ___ __  __
-|    \| | \| | |    \|   \\ \/ /
-| | | | |    | | | | | |\ \>  <
-|_|_|_|_|_|\_|_|_|_|_|_| \_\/\_\";
+     ____  _ _  _ _ ____  ___ __  __
+    |    \| | \| | |    \|   \\ \/ /
+    | | | | |    | | | | | |\ \>  <
+    |_|_|_|_|_|\_|_|_|_|_|_| \_\/\_\";
 
 enum Action {
 	Example,
 	Help,
 	Begin,
 	Set(String),
+	Quit,
 	Invalid(String),
 }
 
 fn main() {
-    println!("{}\n\n", MINIMAX_TITLE);
+	println!("{}\n\n", MINIMAX_TITLE);
 
 	println!("Welcome to Minimax, a simple game of perfect knowledge!
 
@@ -63,13 +64,50 @@ intelligence. I won't always understand you, but I try my best.
 
 So! Without further ado let's get this show on the road!");
 
-	let action = get_action();
-	match action {
-		Action::Example      => println!("You would like an example"),
-		Action::Help         => println!("You would like help"),
-		Action::Begin        => println!("You would like to begin"),
-		Action::Set(string)  => println!("You would like to set a variable: {}", string),
-		Action::Invalid(err) => println!("What the heck did you just bring upon this cursed land: {}", err),
+	let mut singleplayer = true;
+	let mut depth: u32   = 4;
+
+	loop {
+		print!("Please enter a command: ");
+		if let Err(err) = io::stdout().flush() {
+			panic!("{}", err);
+		}
+
+		let action = get_action();
+		match action {
+			Action::Example      => println!("You would like an example"),
+			Action::Help         => println!("You would like help"),
+			Action::Begin        => println!("You would like to begin"),
+			Action::Set(string)  => match get_values(&string) {
+				Ok(("singleplayer", value)) => {
+					match parse_bool(&value) {
+						Ok(boolean) => { singleplayer = boolean; },
+						Err(err)    => println!("{}", err),
+					};
+				},
+				Ok(("depth", value)) => {
+					depth = match value.parse::<u32>() {
+						Ok(num) => {
+							if num > 0 {
+								num
+							}
+							else {
+								println!("Zero is pretty great! Alas it does not make sense as a depth value!");
+								continue;
+							}
+						},
+						Err(_) => {
+							println!("A depth of \"value\" does not make sense to me! I was expecting a positive number!");
+							continue;
+						},
+					};
+				},
+				Ok((key, _)) => println!("\"{}\" is not a key I recognize! Perhaps try something else!", key),
+				Err(_)     => println!("Unfortunately I'm not sure what you are trying to set with the command \"{}\"!", string),
+			},
+			Action::Quit         => break,
+			Action::Invalid(err) => println!("Beep! Bop! Boop! Cannot compute \"{}\"! Haha!", err),
+		}
 	}
 }
 
@@ -79,14 +117,15 @@ fn get_action() -> Action {
 		.read_line(&mut input)
 		.expect("Oh dear! It appears that input was invalid!");
 
-	input = String::from(input.trim());
+	let input = input.trim();
 
-	match input.as_ref() {
+	match input {
 		"example" => Action::Example,
 		"help"    => Action::Help,
 		"begin"   => Action::Begin,
-		&_ if starts_with(&input, "set") => Action::Set(input),
-		&_        => Action::Invalid(input),
+		"quit"    => Action::Quit,
+		&_ if starts_with(&input, "set ") => Action::Set(input["set ".len()..].to_string()),
+		&_        => Action::Invalid(input.to_string()),
 	}
 }
 
@@ -97,4 +136,33 @@ fn starts_with(string: &str, begin: &str) -> bool {
 		if a != b { return false; }
 	}
 	true
+}
+
+fn get_values(string: &str) -> Result<(&str, &str), ()> {
+	let mut split = 0;
+	for (i, byte) in string.bytes().enumerate() {
+		if byte == b'=' {
+			split = i;
+			break;
+		}
+	}
+	if split == string.len() - 1 {
+		return Err(())
+	}
+	let key   = string[..split].trim();
+	let value = string[(split + 1)..].trim();
+	if key.len() == 0 || value.len() == 0 {
+		Err(())
+	}
+	else {
+		Ok((key, value))
+	}
+}
+
+fn parse_bool(value: &str) -> Result<bool, &'static str> {
+	match value {
+		"true"  => Ok(true),
+		"false" => Ok(false),
+		_       => Err("I do apologize, but I was expecting a boolean type!"),
+	}
 }
