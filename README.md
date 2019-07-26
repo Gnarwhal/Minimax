@@ -19,12 +19,12 @@ and a loser then be my guest.
 The program is just a command line version of minimax. Once you run the program you'll be prompted to enter
 a command. The command list is as follows:
 #### example
-Runs you through an example game if still feel a little unclear on the rules of the game
+Walks you through an example game
 #### help
 Brings up a help menu with a list of commands
 #### begin
 Begins the game
-#### set { key } = { value }
+#### set {key} = {value}
 Example: `set depth = 6`  
 Sets some paramaters for the game. Currently the available paramaters are:
 - singleplayer - A boolean value which which sets whether you play against the computer or another person

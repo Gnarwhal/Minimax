@@ -245,10 +245,10 @@ fn pause() {
 fn print_help() {
 	println!("Currently I have a number of commands at my disposal. I'll go ahead and list them for you real quick.
 
-example > Runs you through an example game if still feel a little unclear on the rules of the game
+example > Walks you through an example game if you still feel a little unclear on the rules of the game
 help    > Well I think you already know about this command :)
 begin   > Begins the epic journey through the binary tree
-set {{key}} = {{value}} > Sets some paramaters for the game. Currently the available paramaters are:
+set {{key}} = {{value}} > Example: \"set depth = 6\" | Sets some paramaters for the game. Currently the available paramaters are:
 	singleplayer - A boolean value which which sets whether you play against me or play against your mates
 	depth        - An integer value which sets the depth of the tree
 	min          - One of either \"player_one\" OR \"player_two\". Sets that player's goal to minimize the value
