@@ -24,7 +24,7 @@
  *
  *******************************************************************************/
 
-use std::io::{self, Write};
+use std::io::{self, stdin, Write};
 use rand::Rng;
 
 const MINIMAX_TITLE: &str = r"
@@ -76,7 +76,7 @@ So! Without further ado let's get this show on the road!
 
 		let action = get_action();
 		match action {
-			Action::Example      => println!("You would like an example"),
+			Action::Example      => walkthrough_example(),
 			Action::Help         => print_help(),
 			Action::Begin        => println!("You would like to begin"),
 			Action::Set(string)  => match get_values(&string) {
@@ -114,7 +114,7 @@ So! Without further ado let's get this show on the road!
 
 fn get_action() -> Action {
 	let mut input = String::new();
-	io::stdin()
+	stdin()
 		.read_line(&mut input)
 		.expect("Oh dear! It appears that input was invalid!");
 
@@ -137,6 +137,76 @@ fn starts_with(string: &str, begin: &str) -> bool {
 		if a != b { return false; }
 	}
 	true
+}
+
+fn walkthrough_example() {
+	println!("Alright an example it is. For starters lets \"generate\" a binary tree (the tree for the example is pre-generated, but pretend
+this is a real game and I'm generating it dynamically). We'll use a small depth 4 tree for our example.
+
+0:         +-------B-------+
+           |               |
+1:     +---B---+       +---B---+
+       |       |       |       |
+2:   +-B-+   +-B-+   +-B-+   +-B-+
+     |   |   |   |   |   |   |   |
+3:   4   7   1   3   7   1   2   9
+
+This is our binary tree. It's got the letter B representing the branch nodes and all the leaf nodes at the bottom have a numerical value.
+You can also see it's got 4 rows (depth = 4) labeled 0-3 on the lefthand side. I do so enjoy some nice 0 indexing :)");
+	pause();
+
+	println!("Anyway moving on. Lets introduce some players. Let's say player 1 is Argyle and player 2 is Sol. In this particular game let's also
+say that Argyle is trying to maximize the final number and Sol is trying to minimize it. We begin our journey at the top of the tree
+in layer 0 where the caret is pointing to the B.
+
+0:>        +-------B-------+
+           |       ^       |
+1:     +---B---+       +---B---+
+       |       |       |       |
+2:   +-B-+   +-B-+   +-B-+   +-B-+
+     |   |   |   |   |   |   |   |
+3:   4   7   1   3   7   1   2   9");
+	pause();
+
+	println!("Argyle is now faced with a decision. Do they want to move left down the tree or right down the tree? For whatever reason Argyle decides
+to move left down the tree. After that our game would look like this. The entire right side is now inaccesible and we are now looking at layer 1.
+
+0:         +-<-<-<-B       x
+           V
+1:>    +---B---+       x   B   x
+       |   ^   |
+2:   +-B-+   +-B-+   x B x   x B x
+     |   |   |   |
+3:   4   7   1   3   x   x   x   x");
+	pause();
+
+	println!("Now it is Sol's turn. Sol is faced with the same decision as Argyle. Sol decides that they have a good feeling about left as well.
+So Sol moves left. Now, Argyle seeing that it's between a 4 and a 7 decides that the best option is to go right. And with this move the
+game is complete. The bottom of the tree has been reached and the result of the game is 7. How you decide who is the winner is beyond me,
+but you are free to decide that for yourself if you so choose. After all moves have been taken this is what the game board would look like.
+
+0:         +-<-<-<-B       x
+           V
+1:>    +-<-B   x       x   B   x
+       V
+2:   x B>+   x B x   x B x   x B x
+         V
+3:   4  [7]  1   3   x   x   x   x
+         ^
+Final value: 7
+
+
+And thus concludes our little example game. Hopefully it has demonstrated clearly how one plays the game of Minimax.
+I feel I should note that our friends Argyle and Sol were not playing optimally. I didn't want to spoil the strategy
+for anybody ;) Anyway enough talk. Lets get on with the game.
+
+");
+}
+
+fn pause() {
+	println!("\n\nPress enter to continue. . .");
+	stdin().read_line(&mut String::new()).unwrap();
+	println!();
 }
 
 fn print_help() {
